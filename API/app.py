@@ -1,12 +1,21 @@
-from flask import Flask
+import os
+from flask import Flask, jsonify
+import requests
+import pandas as pd
 
-import server
+# app = Flask(__name__)
 
-app = Flask(__name__)
-
-@app.route('/countries')
-def countries():
-    return 
+# @app.route('/population/<country>', methods=['GET','POST'])
+def population(country,year):
+    logs_dir = os.path.join(os.getcwd(), "Logs")+f"/{country}.csv"    
+    frame = pd.read_csv(logs_dir)
+    print(frame)
+    years = frame['Year']
     
-if __name__=="__main__":
-    app.run(debug=True)
+
+        
+    return None
+    
+population('india',2015)
+# if __name__=="__main__":
+#     app.run(debug=True)

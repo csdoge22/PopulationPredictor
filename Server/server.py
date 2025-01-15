@@ -1,4 +1,5 @@
 # for processing/scraping data 
+import time
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 
@@ -9,17 +10,25 @@ import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy import stats
 
 global g_col_names
-g_col_names = []
+global real_country_names
 
-def load_countries(driver) -> list:    
+g_col_names = ["Year", "Population", "Yearly % Change", "Yearly Change", "Migrants (net)", "Median Age", "Fertility Rate", "Density (P/Km²)", "UrbanPop %", "Urban Population", "Country's Share of World Pop", "World Population", "Global Rank"]
+real_country_names = []
+def load_countries(driver) -> list:
+    logs_dir = os.path.join(os.getcwd(), "Logs")+"countries.csv"
+    os.makedirs(logs_dir, exist_ok=True)
+    
     url = "https://www.worldometers.info/world-population/population-by-country/"
     driver.get(url)
     country_elements = driver.find_elements(by='xpath',value="//td[@style='font-weight: bold; font-size:15px; text-align:left']")
     countries = []
     for element in country_elements:
         countries.append(element.text)
+        real_country_names.append(element.text)
     for i in range(len(countries)):
         # replace all space tokens with hyphens
         countries[i] = countries[i].replace(" ","-").replace("&","and").replace("u.s.","us").lower()
@@ -46,7 +55,10 @@ def load_countries(driver) -> list:
                 countries[i] = "cote-d-ivoire"
             if countries[i]=="réunion":
                 countries[i] = "reunion"
-                
+    frame = pd.DataFrame({"countries":real_country_names})
+    url_frame = pd.DataFrame({"url_countries":countries})
+    frame.to_csv("countries.csv")
+    url_frame.to_csv()
     return countries
 
 def load_statistic(country,driver):
@@ -119,28 +131,50 @@ def job():
         print(load_statistic(country=countries[i],driver=driver))
         print('\n')
     driver.quit()
-    
+
 def index(aset):
     names = ['year','population','yearly\n%\nchange','yearly change']
     return -1
     
-def predict(country,year,chosen_set):
-    """ This method uses linear regression to estimate/identify population, fertility rate, net migration, etc... for years not listed"""
-    logs_dir = os.path.join(os.getcwd(), "Logs")
-    country_url = os.path()
-    try:
-        frame = pd.read_csv(f"../Logs/{country}.csv")
-        x = frame[0]
-        y = frame[chosen_set]
-        
-        plt.scatter(x,y)
-        
-    except FileNotFoundError as e:
-        print("Warning: File Not Found")
+def fit_line(country,col):
+    """ This method returns a scatter plot and returns a line of best fit"""
+    logs_dir = os.path.join(os.getcwd(), "Logs")+f"/{country}.csv"
+    c_dir = os.path.join('countries.csv')
+
+    print(logs_dir)
+    
+    countries = list(pd.read_csv(c_dir)['countries'])
+    print(countries)
+    frame = pd.read_csv(logs_dir)
+    x = np.array(frame['Year'])
+    y = np.array(frame[col])
+    print(x)
+    print(y)
+    
+    slope, intercept, r, p, std_err = stats.linregress(x,y)
+    
+    my_model = list(map(lambda y: slope*y+intercept,x))
+    plt.title(f"Yearly Population of {real_country_names[countries.index(country)]}")
+    plt.scatter(x,y)
+    plt.plot(x, my_model)
+    plt.xlabel("Year")
+    plt.ylabel(col)
+    plt.show()
+    
+    line_of_best_fit = {
+        "slope": slope,
+        "y-intercept": intercept
+    }
+    return line_of_best_fit
+
+def get_stat(country,col,year):
+    
+    pass
 
 """ Testing Area """
-driver = webdriver.Firefox()
-print(load_statistic('martinique',driver))
+# driver = webdriver.Firefox()
+# print(load_countries(driver=driver))
+print(fit_line("india","World Population"))
 # job()
 
 # Scrapes data every day at midnight
